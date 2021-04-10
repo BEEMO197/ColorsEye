@@ -11,6 +11,8 @@ public class DiamondScript : MonoBehaviour
     public float timer = 0.0f;
     public int scoreValue = 100;
     public string moveToLevel = "LevelOne";
+    public SeeColor colorToUnlock = SeeColor.NONE;
+
     // Start is called before the first frame update
     void Start()
     {
@@ -38,6 +40,7 @@ public class DiamondScript : MonoBehaviour
         if(collider.CompareTag("Player"))
         {
             collider.gameObject.GetComponent<PlayerController>().increaseScore(scoreValue);
+            collider.gameObject.GetComponent<ColorManager>().unlockColor(colorToUnlock);
             SceneManager.LoadScene(moveToLevel);
             Destroy(gameObject);
         }

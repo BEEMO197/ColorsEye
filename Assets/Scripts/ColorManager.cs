@@ -1,6 +1,5 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
-
 public enum SeeColor
 {
     NONE,
@@ -15,10 +14,13 @@ public class ColorManager : MonoBehaviour
     private SeeColor currentSeeColor = SeeColor.NONE;
 
     [SerializeField]
+    public bool[] unlockedColors = {true, false, false, false, false};
+
+    [SerializeField]
     private InputActionReference colorChangeControl;
 
-    private bool changingColors = false;
     public LayerMask[] colorCullMasks;
+
     // Start is called before the first frame update
     void Start()
     {
@@ -31,51 +33,49 @@ public class ColorManager : MonoBehaviour
         changeColor();
     }
 
+    public void unlockColor(SeeColor colorToUnlock)
+    {
+        unlockedColors[(int)colorToUnlock] = true;
+    }
+
+    public void lockColor(SeeColor colorToLock)
+    {
+        unlockedColors[(int)colorToLock] = false;
+    }
+
     private void changeColor()
     {
+        int colorChangeValue;
+
         if(colorChangeControl.action.ReadValue<float>() > 0)
-        {
-            if (currentSeeColor.Equals(SeeColor.YELLOW))
-                currentSeeColor = SeeColor.NONE;
-            else
-                currentSeeColor++;
-            changingColors = true;
-        }
+            colorChangeValue = 1;
+
         else if(colorChangeControl.action.ReadValue<float>() < 0)
-        {
-            if (currentSeeColor.Equals(SeeColor.NONE))
-                currentSeeColor = SeeColor.YELLOW;
-            else
-                currentSeeColor--;
-            changingColors = true;
-        }
+            colorChangeValue = -1;
 
+        else
+            colorChangeValue = 0;
 
-        if (changingColors)
+        if (colorChangeValue != 0)
         {
-            switch (currentSeeColor)
+            bool valid = false;
+            do
             {
-                case SeeColor.BLUE:
-                    Camera.main.cullingMask = colorCullMasks[1];
-                    break;
+                currentSeeColor += colorChangeValue;
 
-                case SeeColor.GREEN:
-                    Camera.main.cullingMask = colorCullMasks[2];
-                    break;
+                if ((int)currentSeeColor > (int)SeeColor.YELLOW)
+                    currentSeeColor = SeeColor.NONE;
 
-                case SeeColor.RED:
-                    Camera.main.cullingMask = colorCullMasks[3];
-                    break;
+                else if ((int)currentSeeColor < (int)SeeColor.NONE)
+                    currentSeeColor = SeeColor.YELLOW;
 
-                case SeeColor.YELLOW:
-                    Camera.main.cullingMask = colorCullMasks[4];
-                    break;
-
-                default:
-                    Camera.main.cullingMask = colorCullMasks[0];
-                    break;
-            }
-            changingColors = false;
+                if (unlockedColors[(int)currentSeeColor])
+                {
+                    valid = true;
+                }
+            } while (!valid);
+            GetComponent<PlayerController>().numColorSwaps++;
+            Camera.main.cullingMask = colorCullMasks[(int)currentSeeColor];
         }
     }
 }

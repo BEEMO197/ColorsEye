@@ -114,3 +114,5 @@ MonoBehaviour:
   floatingPower: 0.05
   timer: 0
   scoreValue: 500
+  moveToLevel: LevelOne
+  colorToUnlock: 0

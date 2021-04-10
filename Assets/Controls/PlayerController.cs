@@ -7,6 +7,10 @@ using UnityEngine.SceneManagement;
 [RequireComponent(typeof(CharacterController))]
 public class PlayerController : MonoBehaviour
 {
+
+    [SerializeField]
+    static PlayerController instance;
+
     [SerializeField]
     private InputActionReference movementControl;
 
@@ -67,26 +71,46 @@ public class PlayerController : MonoBehaviour
     private bool gameIsPaused = false;
     [SerializeField]
     private GameObject gamePausedUI;
+
+    public int numJumps = 0;
+    public float distanceTraveled = 0.0f;
+    public int numColorSwaps = 0;
+
     private void Start()
     {
-        respawn(respawnPoint);
-        particleSystem = GetComponent<ParticleSystem>();
-        scoreText.text = score.ToString();
+        if (instance == null)
+        {
+            instance = this;
+
+            DontDestroyOnLoad(gameObject);
+            respawn(respawnPoint);
+            particleSystem = GetComponent<ParticleSystem>();
+            scoreText.text = score.ToString();
+        }
+        else
+            Destroy(gameObject);
+
     }
 
     private void OnEnable()
     {
-        movementControl.action.Enable();
-        jumpControl.action.Enable();
-        respawnControls.action.Enable();
-        pauseControls.action.Enable();
+        if (instance == null)
+        {
+            movementControl.action.Enable();
+            jumpControl.action.Enable();
+            respawnControls.action.Enable();
+            pauseControls.action.Enable();
+        }
     }
     private void OnDisable()
     {
-        movementControl.action.Disable();
-        jumpControl.action.Disable();
-        respawnControls.action.Disable();
-        pauseControls.action.Disable();
+        if (instance == null)
+        {
+            movementControl.action.Disable();
+            jumpControl.action.Disable();
+            respawnControls.action.Disable();
+            pauseControls.action.Disable();
+        }
     }
 
     void Update()
@@ -128,11 +152,12 @@ public class PlayerController : MonoBehaviour
             // Changes the height position of the player..
             if (jumpControl.action.triggered && groundedPlayer)
             {
+                numJumps++;
                 playerVelocity.y += getJumpPower();
             }
 
-
             controller.Move((move * playerSpeed + playerVelocity) * Time.deltaTime);
+
             groundedPlayer = controller.isGrounded;
             if (movement != Vector2.zero)
             {
@@ -143,7 +168,54 @@ public class PlayerController : MonoBehaviour
             }
         }
     }
-    
+
+    private void OnLevelWasLoaded(int level)
+    {
+        respawn(respawnPoint);
+    }
+
+    public void saveGame()
+    {
+        PlayerPrefs.SetFloat("PlayerXPos", transform.position.x);
+        PlayerPrefs.SetFloat("PlayerYPos", transform.position.y);
+        PlayerPrefs.SetFloat("PlayerZPos", transform.position.z);
+        PlayerPrefs.SetString("CurrentLevel", SceneManager.GetActiveScene().ToString());
+
+        PlayerPrefs.SetInt("PlayerScore", score);
+        PlayerPrefs.SetInt("PlayerNumJumps", numJumps);
+        PlayerPrefs.SetFloat("PlayerDistanceTraveled", distanceTraveled);
+        PlayerPrefs.SetInt("PlayerNumColorSwaps", numColorSwaps);
+
+        ColorManager cm = GetComponent<ColorManager>();
+        PlayerPrefs.SetInt("UnlockedBlueColor", (cm.unlockedColors[1] ? 1 : 0));
+        PlayerPrefs.SetInt("UnlockedRedColor", (cm.unlockedColors[2] ? 1 : 0));
+        PlayerPrefs.SetInt("UnlockedGreenColor", (cm.unlockedColors[3] ? 1 : 0));
+        PlayerPrefs.SetInt("UnlockedYellowColor", (cm.unlockedColors[4] ? 1 : 0));
+    }
+
+    public void loadGame()
+    {
+        if (PlayerPrefs.HasKey("PlayerNumJumps"))
+        {
+            SceneManager.LoadScene(PlayerPrefs.GetString("CurrentLevel"));
+
+            pauseGame();
+            respawn(new Vector3(PlayerPrefs.GetFloat("PlayerXPos"), PlayerPrefs.GetFloat("PlayerYPos"), PlayerPrefs.GetFloat("PlayerZPos")));
+
+            score = PlayerPrefs.GetInt("PlayerScore");
+            numJumps = PlayerPrefs.GetInt("PlayerNumJumps");
+            distanceTraveled = PlayerPrefs.GetFloat("PlayerDistanceTraveled");
+            numColorSwaps = PlayerPrefs.GetInt("PlayerNumColorSwaps");
+
+            ColorManager cm = GetComponent<ColorManager>();
+            cm.unlockedColors[1] = PlayerPrefs.GetInt("UnlockedBlueColor") == 1 ? true : false; 
+            cm.unlockedColors[2] = PlayerPrefs.GetInt("UnlockedRedColor") == 1 ? true : false;
+            cm.unlockedColors[3] = PlayerPrefs.GetInt("UnlockedGreenColor") == 1 ? true : false;
+            cm.unlockedColors[4] = PlayerPrefs.GetInt("UnlockedYellowColor") == 1 ? true : false;
+        }
+        // else no save file
+    }
+
     public void pauseGame()
     {
         if(gameIsPaused)
